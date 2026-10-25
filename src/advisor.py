@@ -163,3 +163,105 @@ def project_wealth(picks: pd.DataFrame, inv: Investor, cap: float = 15.0):
 
     return {"expected_return_%": round(exp_ret, 2), "invested_₹": round(invested),
             "future_value_₹": round(fv_sip + fv_lump), "yearly": pd.DataFrame(yearly)}
+
+
+# ----------------------------------------------------------------------------
+# Plain-language advice (for people with no finance background)
+# ----------------------------------------------------------------------------
+def inr(x: float) -> str:
+    """Indian style amounts: ₹4,500 / ₹3.6 lakh / ₹1.18 crore."""
+    x = float(x)
+    if x >= 1e7:
+        return f"₹{x / 1e7:.2f} crore"
+    if x >= 1e5:
+        return f"₹{x / 1e5:.1f} lakh"
+    return f"₹{x:,.0f}"
+
+
+PROFILE_TEXT = {
+    "Conservative": "You prefer safety over high returns. Your plan focuses on protecting your money, so it stays mostly in low-risk options.",
+    "Moderately Conservative": "You want steady growth but don't like big ups and downs. Most of your money goes into safer options, with some in the stock market for growth.",
+    "Moderate": "You want a balance of growth and safety. Your money is split fairly evenly between the stock market and safer options.",
+    "Moderately Aggressive": "You are okay with ups and downs for better long-term growth. Most of your money goes into the stock market.",
+    "Aggressive": "You can handle big short-term falls to aim for the highest long-term growth. Almost all your money goes into the stock market.",
+}
+BUCKET_TEXT = {
+    "Equity": "stock-market funds. They grow the most over 5+ years, but can fall 20-40% in a bad year",
+    "Hybrid": "mixed funds (stocks + bonds). Smoother ride than pure equity, moderate growth",
+    "Debt": "bond / money-market funds. Low risk and steady, similar to a fixed deposit (FD)",
+}
+OUTLOOK_TEXT = {
+    "Bullish": "Our market model sees slightly positive signals for the next month, so we added a little (5%) more to stock-market funds.",
+    "Bearish": "Our market model sees weak signals for the next month, so we moved 10% from stock-market funds to safer debt funds.",
+    "Neutral": "Our market model sees mixed signals for the next month, so we kept your normal plan.",
+}
+
+
+def explain_advice(rec: dict, proj, inv: Investor, outlook: str = "Neutral") -> list:
+    """Returns a list of (heading, markdown text) sections in simple language."""
+    prof, alloc, picks = rec["profile"], rec["allocation"], rec["picks"]
+    sections = [("Your investor type: " + prof["profile"], PROFILE_TEXT.get(prof["profile"], ""))]
+
+    # where the money goes, in rupees
+    lines = []
+    for bucket, w in alloc.items():
+        if w <= 0:
+            continue
+        parts = []
+        if inv.monthly_sip:
+            parts.append(f"{inr(inv.monthly_sip * w)}/month")
+        if inv.lumpsum:
+            parts.append(f"{inr(inv.lumpsum * w)} one-time")
+        lines.append(f"- **{' + '.join(parts)} ({w:.0%}) in {bucket}**: {BUCKET_TEXT[bucket]}.")
+    sections.append(("Where your money goes", "\n".join(lines)))
+
+    signal = OUTLOOK_TEXT.get(outlook, OUTLOOK_TEXT["Neutral"])
+    if outlook in ("Bullish", "Bearish"):
+        signal += " This is only a small adjustment, because nobody can reliably predict the market month to month."
+    else:
+        signal += " Trying to time the market rarely works; investing regularly matters more."
+    sections.append(("What the market signal means", signal))
+
+    # why these funds
+    if not picks.empty:
+        lines = []
+        for _, f in picks.iterrows():
+            why = []
+            if pd.notna(f.get("returns_3yr_%")):
+                why.append(f"earned about {f['returns_3yr_%']:.0f}% per year over the last 3 years")
+            if pd.notna(f.get("expense_ratio_%")):
+                cost = "low" if f["expense_ratio_%"] <= 0.75 else "moderate" if f["expense_ratio_%"] <= 1.5 else "high"
+                why.append(f"{cost} yearly fee ({f['expense_ratio_%']:.2f}%)")
+            why.append(f"risk: {f['risk']}")
+            lines.append(f"- **{f['scheme_name']}**: " + ", ".join(why) + ".")
+        sections.append(("Why these funds",
+                         "Each fund was picked for strong past returns, good returns for the risk taken, and low fees.\n\n" + "\n".join(lines)))
+
+    # what to expect
+    if proj:
+        txt = (f"If you stay invested for **{inv.horizon_years} years** and returns average about "
+               f"**{proj['expected_return_%']:.0f}% per year**, your {inr(proj['invested_₹'])} could grow to roughly "
+               f"**{inr(proj['future_value_₹'])}**. ")
+        if alloc.get("Equity", 0) >= 0.5:
+            txt += ("Expect some years where your portfolio shows a loss; that's normal for stock-market funds "
+                    "and usually recovers if you stay invested. ")
+        txt += "This is an estimate based on past data, not a promise."
+        sections.append(("What you can expect", txt))
+
+    # practical tips
+    tips = ["Keep 3-6 months of expenses in a savings account or FD as an **emergency fund** before investing.",
+            "Choose the **Direct plan** of each fund (not Regular); it has lower fees.",
+            "**Review your plan once a year**, or when your income or goals change."]
+    if inv.monthly_sip:
+        tips.insert(1, "**Don't stop your SIP when markets fall.** You buy more units cheaply, which helps long-term returns.")
+    else:
+        tips.insert(1, "**Don't panic-sell when markets fall.** Short-term drops usually recover if you stay invested.")
+    if inv.horizon_years < 3:
+        tips.insert(0, "Your goal is less than 3 years away, so your plan avoids putting much in stock-market funds. "
+                       "Short-term money should stay safe.")
+    if alloc.get("Equity", 0) > 0:
+        tips.append("**ELSS** funds (a type of equity fund) can also save income tax under Section 80C, with a 3-year lock-in.")
+    sections.append(("Simple tips", "\n".join(f"- {t}" for t in tips)))
+    sections.append(("Important", "This is a college project using past data, not professional financial advice. "
+                                  "Talk to a SEBI-registered advisor before investing real money."))
+    return sections
