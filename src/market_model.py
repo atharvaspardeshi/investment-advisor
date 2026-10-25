@@ -29,6 +29,8 @@ HORIZON = 21               # trading days ≈ 1 month
 def index_stats(prices: pd.DataFrame, min_years: float = 3) -> pd.DataFrame:
     rows = []
     for col in prices.columns:
+        if "VIX" in col.upper():        # volatility index: not investable, skip
+            continue
         p = prices[col].dropna()
         years = len(p) / TRADING_DAYS
         if years < min_years:
