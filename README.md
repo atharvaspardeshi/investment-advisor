@@ -2,6 +2,8 @@
 
 An investment advisor for Indian investors that combines **NSE market data** and **mutual fund data** with machine learning to recommend a personalised portfolio and SIP plan.
 
+**🔗 Live app: https://investment-advisor-atharva.streamlit.app**
+
 > Academic mini-project (Machine Learning / Data Science). Not SEBI-registered financial advice.
 
 ## Datasets
