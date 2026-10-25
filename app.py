@@ -8,7 +8,7 @@ import shutil
 import pandas as pd
 import streamlit as st
 
-from src.advisor import Investor, project_wealth, recommend
+from src.advisor import Investor, explain_advice, project_wealth, recommend
 from src.data_loader import load_mutual_funds, load_nse_indices, pick_benchmark
 from src.fund_model import score_funds, train_fund_model
 from src.market_model import index_stats, outlook_label, train_market_model
@@ -80,6 +80,15 @@ with tab_adv:
             c1.metric("Risk profile", prof["profile"])
             c2.metric("Risk score", f"{prof['score']} / 16")
             c3.metric("Market outlook", outlook, f"P(up) = {mkt['prob_up']:.0%}", delta_color="off")
+
+            proj = project_wealth(rec["picks"], inv) if not rec["picks"].empty else None
+            st.subheader("📝 Your advice in simple words")
+            for i, (heading, text) in enumerate(explain_advice(rec, proj, inv, outlook)):
+                if heading == "Important":
+                    st.caption(text)
+                else:
+                    with st.expander(heading, expanded=i < 2):
+                        st.markdown(text)
 
             st.subheader("Asset allocation")
             alloc = pd.DataFrame({"weight_%": {k: v * 100 for k, v in rec["allocation"].items()}})
