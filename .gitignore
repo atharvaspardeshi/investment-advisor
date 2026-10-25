@@ -1,0 +1,9 @@
+# datasets are downloaded from Kaggle, not committed
+data/**/*.csv
+outputs/*.joblib
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+.DS_Store
