@@ -1,6 +1,10 @@
 """
 Web app:   streamlit run app.py
 """
+import glob
+import os
+import shutil
+
 import pandas as pd
 import streamlit as st
 
@@ -12,8 +16,24 @@ from src.market_model import index_stats, outlook_label, train_market_model
 st.set_page_config(page_title="Investment Advisor", page_icon="📈", layout="wide")
 
 
-@st.cache_resource(show_spinner="Training models on the data...")
+DATASETS = {"data/nse": "vinay20/stock-market-nse-indices-daily-data2000",
+            "data/mutual_funds": "ravibarnawal/mutual-funds-india-detailed"}
+
+
+def ensure_data():
+    """On a fresh server (e.g. Streamlit Cloud) data/ is empty, so download it from Kaggle once."""
+    for folder, slug in DATASETS.items():
+        if not glob.glob(os.path.join(folder, "**", "*.csv"), recursive=True):
+            import kagglehub
+            path = kagglehub.dataset_download(slug)
+            os.makedirs(folder, exist_ok=True)
+            for f in glob.glob(os.path.join(path, "**", "*.csv"), recursive=True):
+                shutil.copy(f, folder)
+
+
+@st.cache_resource(show_spinner="Downloading data and training models (first load takes ~1 min)...")
 def load_everything(nse_dir="data/nse", mf_path="data/mutual_funds"):
+    ensure_data()
     prices = load_nse_indices(nse_dir)
     bench = pick_benchmark(prices)
     mkt = train_market_model(prices[bench])
