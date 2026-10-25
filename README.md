@@ -6,6 +6,25 @@ An investment advisor for Indian investors that combines **NSE market data** and
 
 > Academic mini-project (Machine Learning / Data Science). Not SEBI-registered financial advice.
 
+## Features
+| Tab | What it does |
+|---|---|
+| 🎯 Get advice | 5-question risk profile → equity/hybrid/debt split → top funds → wealth projection, plus advice in simple words |
+| 🧮 Calculators | SIP (with yearly step-up), lumpsum and SWP (monthly withdrawal) calculators with charts |
+| 🏁 Goal planner | Add goals (car, studies, retirement...) → inflation-adjusted cost → monthly SIP needed and a safe fund mix per goal |
+| 🤖 AI assistant | Chatbot for mutual fund questions (English or Hinglish), answering from a knowledge base + our fund data (RAG) |
+| 📊 Market / 🔍 Fund explorer / 📈 Models | NSE index analysis, searchable fund table, ML model results |
+
+### AI assistant: how it works
+1. **Retrieve:** the question is matched (TF-IDF + cosine similarity) against `data/knowledge/mutual_fund_basics.md` and any PDFs placed in `data/docs/` (e.g. RBI / AMFI guides).
+2. **Augment:** for questions like "best small cap fund", the top-scored funds from the dataset are added.
+3. **Generate:** if a Gemini API key is set, Gemini writes a simple answer from that context. Without a key it still works in search mode, showing the best-matching answer.
+
+**Turn on full AI answers (free):** get a key at aistudio.google.com, then either paste it in the app under *AI assistant → AI settings*, or add it permanently on Streamlit Cloud (*Manage app → Settings → Secrets*):
+```toml
+GEMINI_API_KEY = "your-key-here"
+```
+
 ## Datasets
 | Dataset | Content | Used for |
 |---|---|---|
@@ -40,7 +59,12 @@ investment-advisor/
 │   ├── data_loader.py     # loading + cleaning both datasets
 │   ├── market_model.py    # Part A
 │   ├── fund_model.py      # Part B
-│   └── advisor.py         # Part C
+│   ├── advisor.py         # Part C + plain-language advice
+│   ├── calculator.py      # SIP / lumpsum / SWP maths
+│   ├── goal_planner.py    # inflation-adjusted goal planning
+│   └── chatbot.py         # RAG chatbot (TF-IDF retrieval + Gemini)
+├── data/knowledge/        # chatbot knowledge base (markdown)
+├── data/docs/             # optional PDFs for the chatbot
 ├── app.py                 # Streamlit web app
 ├── main.py                # run the whole pipeline from terminal, saves charts to outputs/
 ├── scripts/
