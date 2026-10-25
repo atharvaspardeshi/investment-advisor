@@ -63,15 +63,39 @@ streamlit run app.py                 # opens the web app in the browser
 ```
 Use `python main.py --benchmark "NIFTY BANK"` to model a different index.
 
-## Results
-Run `python main.py` and copy the tables from `outputs/market_model_results.csv` and `outputs/fund_model_results.csv` here.
+## Results (real Kaggle data, run on Google Colab)
 
-| Model | Metric | Value |
-|---|---|---|
-| Market: Logistic Regression | ROC-AUC (test) | _fill_ |
-| Market: Random Forest | ROC-AUC (test) | _fill_ |
-| Funds: Linear Regression | R² / MAE (test) | _fill_ |
-| Funds: Random Forest | R² / MAE (test) | _fill_ |
+### Market model: will NIFTY 50 be up after 21 trading days?
+Test period: Oct 2019 to Apr 2025 (time-based split, train on 1997-2019).
+
+| Model | Accuracy | F1 | ROC-AUC |
+|---|---|---|---|
+| Baseline (always UP) | 0.631 | 0.773 | 0.500 |
+| Logistic Regression | 0.610 | 0.758 | 0.525 |
+| **Random Forest** (selected) | 0.622 | 0.767 | **0.546** |
+
+The market went up in 63% of months, so "always UP" already scores 63% accuracy. The Random Forest ranks up/down months slightly better than chance (AUC 0.546) but doesn't beat the baseline on accuracy. This matches the efficient-market hypothesis and is why the advisor uses the outlook only as a small (max 10%) allocation tilt.
+
+### Fund model: predict 3-year return (768 funds)
+| Model | 5-fold CV R² | Test R² | Test MAE |
+|---|---|---|---|
+| Linear Regression | 0.804 | 0.677 | 3.21% |
+| **Random Forest** (selected) | 0.852 | **0.897** | **2.21%** |
+
+Top features: standard deviation (0.74 importance), risk level, 1-year return, small-cap sub-category. Higher-volatility funds earned higher 3-year returns in this period.
+
+### Index highlights (30 NSE indices)
+- NIFTY 50 (1997-2025): 12.4% CAGR, 22.7% volatility, worst fall −59.9%.
+- Best Sharpe among long-history indices: NIFTY IT (0.52) and NIFTY Midcap (0.51). Weakest: Realty, Media, Metal, PSU Bank.
+
+### Sample advice
+| Investor | Profile | Equity / Hybrid / Debt | Expected return | Invested → projected |
+|---|---|---|---|---|
+| Student, 21, ₹3,000 SIP, 10 yrs | Moderately Aggressive | 65 / 15 / 20 | 14.0% | ₹3.6L → ₹7.5L |
+| Professional, 35, ₹20,000 SIP, 15 yrs | Aggressive | 80 / 10 / 10 | 14.5% | ₹36L → ₹1.18 Cr |
+| Retiree, 62, ₹5L lumpsum, 3 yrs | Moderately Conservative | 30 / 25 / 45 | 12.3% | ₹5L → ₹7.1L |
+
+Projections use model-predicted returns capped at 15%. The 2021-24 bull run inflates past 3-year returns, so real future returns are likely lower.
 
 ## Limitations & future scope
 - Fund data is a single snapshot; past returns don't guarantee future returns.
